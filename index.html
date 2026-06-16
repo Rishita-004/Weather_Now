@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App – Glassmorphism UI</title>
+  <meta name="description" content="A premium glassmorphism weather application with stunning light and dark mode designs, live weather data, and smooth animations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+
+  <!-- ============================================================
+       CANVAS: SKY BACKGROUND (light) / NIGHT SKY (dark)
+  ============================================================ -->
+  <div class="canvas-bg" id="canvasBg">
+
+
+    <!-- LIGHT MODE: Glowing Sun (top-left) -->
+    <div class="celestial-body sun-wrapper" id="sunWrapper">
+      <div class="sun-outer-glow"></div>
+      <div class="sun-mid-glow"></div>
+      <div class="sun-core">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="60" r="42" fill="#FDB913"/>
+          <g class="sun-rays-rotate" stroke="#FDB913" stroke-width="5" stroke-linecap="round">
+            <line x1="60" y1="4"  x2="60" y2="20"/>
+            <line x1="60" y1="100" x2="60" y2="116"/>
+            <line x1="4"  y1="60" x2="20" y2="60"/>
+            <line x1="100" y1="60" x2="116" y2="60"/>
+            <line x1="20" y1="20" x2="31" y2="31"/>
+            <line x1="89" y1="89" x2="100" y2="100"/>
+            <line x1="100" y1="20" x2="89" y2="31"/>
+            <line x1="31" y1="89" x2="20" y2="100"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- DARK MODE: Glowing Moon (top-left) -->
+    <div class="celestial-body moon-wrapper" id="moonWrapper">
+      <div class="moon-outer-glow"></div>
+      <div class="moon-mid-glow"></div>
+      <div class="moon-core">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <!-- Full moon circle -->
+          <circle cx="60" cy="60" r="40" fill="#E8E0D0"/>
+          <!-- Craters for realism -->
+          <circle cx="48" cy="46" r="7" fill="rgba(180,170,150,0.35)"/>
+          <circle cx="72" cy="55" r="5" fill="rgba(180,170,150,0.25)"/>
+          <circle cx="55" cy="70" r="6" fill="rgba(180,170,150,0.30)"/>
+          <circle cx="66" cy="40" r="4" fill="rgba(180,170,150,0.20)"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- DARK MODE: Scattered Stars -->
+    <div class="stars-layer" id="starsLayer"></div>
+
+    <!-- Floating Bubbles (both modes) -->
+    <div class="bubbles-layer" id="bubblesLayer"></div>
+  </div>
+
+
+
+  <!-- ============================================================
+       MAIN APPLICATION LAYOUT
+  ============================================================ -->
+  <div class="app-layout">
+
+    <!-- ---- HEADER ---- -->
+    <header class="app-header" id="appHeader">
+      <div class="header-brand">
+        <!-- Light mode icon -->
+        <div class="brand-icon light-icon" id="brandIconLight">
+          <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <circle cx="18" cy="18" r="18" fill="#1A3A5C" opacity="0.9"/>
+            <circle cx="18" cy="14" r="5" fill="#FDB913"/>
+            <g stroke="#FDB913" stroke-width="1.8" stroke-linecap="round">
+              <line x1="18" y1="6" x2="18" y2="9"/>
+              <line x1="18" y1="19" x2="18" y2="22"/>
+              <line x1="10" y1="14" x2="13" y2="14"/>
+              <line x1="23" y1="14" x2="26" y2="14"/>
+              <line x1="12.3" y1="8.3" x2="14.4" y2="10.4"/>
+              <line x1="21.6" y1="17.6" x2="23.7" y2="19.7"/>
+              <line x1="23.7" y1="8.3" x2="21.6" y2="10.4"/>
+              <line x1="14.4" y1="17.6" x2="12.3" y2="19.7"/>
+            </g>
+            <path d="M10 26h16a5 5 0 0 0-1.5-9.75A6 6 0 1 0 9 21c0 .4.04.8.11 1.17A4.5 4.5 0 0 0 10 26z" fill="white" opacity="0.95"/>
+          </svg>
+        </div>
+        <!-- Dark mode icon -->
+        <div class="brand-icon dark-icon" id="brandIconDark">
+          <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <circle cx="18" cy="18" r="18" fill="#1E293B" opacity="0.9"/>
+            <path d="M22 10a8 8 0 1 0 0 16 8 8 0 0 1-6-12.5A7.9 7.9 0 0 1 22 10z" fill="#E8E0D0" opacity="0.95"/>
+            <circle cx="24" cy="10" r="1" fill="#F5E6B8"/>
+            <circle cx="28" cy="16" r="0.8" fill="#F5E6B8"/>
+            <circle cx="26" cy="24" r="0.6" fill="#F5E6B8"/>
+          </svg>
+        </div>
+        <h1 class="brand-name" id="brandName">Weather App</h1>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-location glass-btn" id="locationBtn" type="button">
+          <svg class="icon-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span>My Location</span>
+        </button>
+        <button class="btn-theme glass-btn" id="themeToggleBtn" type="button" title="Toggle Theme">
+          <!-- Sun icon (shown in light mode → click to go dark) -->
+          <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <!-- Moon icon (shown in dark mode → click to go light) -->
+          <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ---- SEARCH BAR ---- -->
+    <section class="search-section">
+      <div class="search-bar glass-bar" id="searchBar">
+        <svg class="search-icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="cityInput" placeholder="Search city..." autocomplete="off">
+        <button class="btn-search" id="searchBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ---- CONTENT AREA ---- -->
+    <div class="content-grid">
+
+      <!-- ===== MAIN WEATHER CARD ===== -->
+      <section class="weather-card glass-card" id="weatherCard">
+        <!-- Loader -->
+        <div class="loader-overlay" id="loaderOverlay">
+          <div class="spinner-ring"></div>
+          <p>Fetching weather...</p>
+        </div>
+        <!-- Error -->
+        <div class="error-state" id="errorContainer">
+          <div class="error-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h3 id="errorTitle">City Not Found</h3>
+          <p id="errorMessage">Please check the spelling and try again.</p>
+          <button id="errorResetBtn" class="btn-retry">Try Again</button>
+        </div>
+
+        <!-- Weather Content -->
+        <div class="weather-content" id="weatherContent">
+          <div class="weather-info-col">
+            <!-- Location -->
+            <div class="location-row">
+              <svg class="loc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span class="city-name" id="cityName">New Delhi, IN</span>
+            </div>
+            <!-- Date & Time -->
+            <div class="datetime-row">
+              <span class="date-text" id="currentDate">Monday, 19 May 2025</span>
+              <span class="time-badge" id="currentTime">11:30 AM</span>
+            </div>
+            <!-- Temp -->
+            <div class="temp-block">
+              <span class="temp-value" id="currentTemp">32</span><span class="temp-deg">°C</span>
+            </div>
+            <!-- Condition -->
+            <div class="condition-row">
+              <div class="condition-pill" id="weatherCondition">Clear Sky</div>
+            </div>
+          </div>
+          <!-- Large Illustration -->
+          <div class="weather-illus-col">
+            <div class="weather-icon-container" id="weatherIconContainer">
+              <!-- Default sunny SVG; JS updates this -->
+              <svg class="weather-svg sunny-icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="72" fill="rgba(253,185,19,0.12)"/>
+                <circle cx="100" cy="100" r="52" fill="rgba(253,185,19,0.22)"/>
+                <circle class="sun-body" cx="100" cy="100" r="38" fill="#FDB913"/>
+                <g class="sun-beams" stroke="#FDB913" stroke-width="7" stroke-linecap="round">
+                  <line x1="100" y1="18" x2="100" y2="34"/>
+                  <line x1="100" y1="166" x2="100" y2="182"/>
+                  <line x1="18" y1="100" x2="34" y2="100"/>
+                  <line x1="166" y1="100" x2="182" y2="100"/>
+                  <line x1="39.5" y1="39.5" x2="51" y2="51"/>
+                  <line x1="149" y1="149" x2="160.5" y2="160.5"/>
+                  <line x1="160.5" y1="39.5" x2="149" y2="51"/>
+                  <line x1="51" y1="149" x2="39.5" y2="160.5"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== WEATHER STATS ===== -->
+      <section class="stats-row">
+        <div class="stat-card glass-card">
+          <div class="stat-icon humidity-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+            </svg>
+          </div>
+          <div class="stat-label">Humidity</div>
+          <div class="stat-value" id="humidity">42%</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon wind-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+            </svg>
+          </div>
+          <div class="stat-label">Wind</div>
+          <div class="stat-value" id="windSpeed">12 km/h</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon feels-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+            </svg>
+          </div>
+          <div class="stat-label">Feels Like</div>
+          <div class="stat-value" id="feelsLike">34°C</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-icon pressure-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="stat-label">Pressure</div>
+          <div class="stat-value" id="pressure">1012 hPa</div>
+        </div>
+      </section>
+
+      <!-- ===== 5-DAY FORECAST ===== -->
+      <section class="forecast-section glass-card" id="forecastSection">
+        <h2 class="forecast-title">5-Day Forecast</h2>
+        <div class="forecast-grid" id="forecastGrid">
+          <!-- Static fallback; JS replaces these -->
+          <div class="forecast-card">
+            <span class="fc-day">Tue</span>
+            <div class="fc-icon">
+              <svg class="weather-svg sunny-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle class="sun-glow" cx="50" cy="50" r="24" fill="rgba(253,185,19,0.2)"/>
+                <circle class="sun-body" cx="50" cy="50" r="16" fill="#FDB913"/>
+                <g class="sun-beams" stroke="#FDB913" stroke-width="4" stroke-linecap="round">
+                  <line x1="50" y1="18" x2="50" y2="26"/><line x1="50" y1="74" x2="50" y2="82"/>
+                  <line x1="18" y1="50" x2="26" y2="50"/><line x1="74" y1="50" x2="82" y2="50"/>
+                  <line x1="27.4" y1="27.4" x2="33" y2="33"/><line x1="67" y1="67" x2="72.6" y2="72.6"/>
+                  <line x1="72.6" y1="27.4" x2="67" y2="33"/><line x1="33" y1="67" x2="27.4" y2="72.6"/>
+                </g>
+              </svg>
+            </div>
+            <span class="fc-high">33°C</span>
+            <span class="fc-low">18°C</span>
+          </div>
+          <div class="forecast-card">
+            <span class="fc-day">Wed</span>
+            <div class="fc-icon">
+              <svg class="weather-svg partlycloudy-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(8,-8)">
+                  <circle class="sun-glow" cx="44" cy="44" r="22" fill="rgba(253,185,19,0.2)"/>
+                  <circle class="sun-body" cx="44" cy="44" r="14" fill="#FDB913"/>
+                </g>
+                <path class="cloud-front" d="M30 68h36a18 18 0 1 0-5.5-35.15A20 20 0 1 0 26 52c0 1.4.15 2.78.43 4.1A17 17 0 0 0 30 68z" fill="#E2E8F0"/>
+              </svg>
+            </div>
+            <span class="fc-high">34°C</span>
+            <span class="fc-low">20°C</span>
+          </div>
+          <div class="forecast-card">
+            <span class="fc-day">Thu</span>
+            <div class="fc-icon">
+              <svg class="weather-svg cloudy-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path class="back-cloud" d="M36 60h28a16 16 0 1 0-4.85-31.25A18 18 0 1 0 32 46c0 1.25.13 2.47.38 3.65A15 15 0 0 0 36 60z" fill="rgba(203,213,225,0.6)"/>
+                <path class="main-cloud" d="M30 68h36a18 18 0 1 0-5.5-35.15A20 20 0 1 0 26 52c0 1.4.15 2.78.43 4.1A17 17 0 0 0 30 68z" fill="#E2E8F0"/>
+              </svg>
+            </div>
+            <span class="fc-high">32°C</span>
+            <span class="fc-low">19°C</span>
+          </div>
+          <div class="forecast-card">
+            <span class="fc-day">Fri</span>
+            <div class="fc-icon">
+              <svg class="weather-svg rainy-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path class="cloud-body" d="M30 62h36a18 18 0 1 0-5.5-35.15A20 20 0 1 0 26 46c0 1.4.15 2.78.43 4.1A17 17 0 0 0 30 62z" fill="#94A3B8"/>
+                <g stroke="#0ea5e9" stroke-width="3.5" stroke-linecap="round">
+                  <line class="drop-1" x1="38" y1="68" x2="35" y2="80"/>
+                  <line class="drop-2" x1="50" y1="68" x2="47" y2="80"/>
+                  <line class="drop-3" x1="62" y1="68" x2="59" y2="80"/>
+                </g>
+              </svg>
+            </div>
+            <span class="fc-high">28°C</span>
+            <span class="fc-low">18°C</span>
+          </div>
+          <div class="forecast-card">
+            <span class="fc-day">Sat</span>
+            <div class="fc-icon">
+              <svg class="weather-svg partlycloudy-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <g transform="translate(8,-8)">
+                  <circle class="sun-glow" cx="44" cy="44" r="22" fill="rgba(253,185,19,0.2)"/>
+                  <circle class="sun-body" cx="44" cy="44" r="14" fill="#FDB913"/>
+                </g>
+                <path class="cloud-front" d="M30 68h36a18 18 0 1 0-5.5-35.15A20 20 0 1 0 26 52c0 1.4.15 2.78.43 4.1A17 17 0 0 0 30 68z" fill="#E2E8F0"/>
+              </svg>
+            </div>
+            <span class="fc-high">30°C</span>
+            <span class="fc-low">17°C</span>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /content-grid -->
+
+
+
+  </div><!-- /app-layout -->
+
+  <!-- ============================================================
+       HELP MODAL
+  ============================================================ -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal-card glass-card">
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+      <h2>API Key Setup</h2>
+      <p>This Weather App uses <strong>OpenWeatherMap API</strong>. To get real-time data:</p>
+      <ol>
+        <li>Go to <a href="https://openweathermap.org/" target="_blank" rel="noopener">openweathermap.org</a> and sign up.</li>
+        <li>Navigate to <strong>API Keys</strong> in your dashboard.</li>
+        <li>Copy your key and paste it into the API key bar at the top of the page.</li>
+      </ol>
+      <div class="modal-note">New API keys can take 2–3 hours to activate.</div>
+      <button class="btn-modal-ok" id="modalOkBtn">Got it</button>
+    </div>
+  </div>
+
+  <script src="script.js?v=4"></script>
+</body>
+</html>
