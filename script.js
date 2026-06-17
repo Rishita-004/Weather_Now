@@ -11,7 +11,7 @@
 // ==========================================================================
 let currentMode = 'demo'; // 'demo' or 'live'
 let hasServerApiKey = false;
-let userApiKey = localStorage.getItem('owm_user_api_key') || '';
+let userApiKey = localStorage.getItem('owm_user_api_key') || '082555b2676a99d93c5d2600f6a73d41';
 
 // ==========================================================================
 // 2. DOM SELECTORS
