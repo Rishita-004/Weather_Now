@@ -7,12 +7,11 @@
  */
 
 // ==========================================================================
-// 1. API CONFIGURATION
+// 1. API CONFIGURATION & STATE
 // ==========================================================================
-const API_KEY_DEFAULT = ""; // ← insert your OpenWeatherMap key here
-
-let apiToken = API_KEY_DEFAULT;
-let isDemoMode = !API_KEY_DEFAULT;
+let currentMode = 'demo'; // 'demo' or 'live'
+let hasServerApiKey = false;
+let userApiKey = localStorage.getItem('owm_user_api_key') || '';
 
 // ==========================================================================
 // 2. DOM SELECTORS
@@ -21,6 +20,16 @@ const el = {
   // Header
   locationBtn: document.getElementById('locationBtn'),
   themeToggleBtn: document.getElementById('themeToggleBtn'),
+
+  // API Key & Mode Toggles
+  apiKeyWrapper: document.getElementById('apiKeyWrapper'),
+  apiKeyBar: document.getElementById('apiKeyBar'),
+  apiKeyInput: document.getElementById('apiKeyInput'),
+  apiKeySaveBtn: document.getElementById('apiKeySaveBtn'),
+  apiKeyToggleBtn: document.getElementById('apiKeyToggleBtn'),
+  apiStatusDot: document.getElementById('apiStatusDot'),
+  demoModeBtn: document.getElementById('demoModeBtn'),
+  liveModeBtn: document.getElementById('liveModeBtn'),
 
   // Search
   cityInput: document.getElementById('cityInput'),
@@ -363,56 +372,102 @@ function isDarkMode() {
 // ==========================================================================
 // 8. WEATHER FETCH & RENDER
 // ==========================================================================
+function updateModeUI() {
+  if (!el.liveModeBtn || !el.demoModeBtn || !el.apiStatusDot) return;
+  if (currentMode === 'live') {
+    el.liveModeBtn.classList.add('active');
+    el.demoModeBtn.classList.remove('active');
+    el.apiStatusDot.classList.add('live');
+    el.apiStatusDot.setAttribute('title', 'Live Mode Active');
+  } else {
+    el.liveModeBtn.classList.remove('active');
+    el.demoModeBtn.classList.add('active');
+    el.apiStatusDot.classList.remove('live');
+    el.apiStatusDot.setAttribute('title', 'Demo Mode Active');
+  }
+}
+
+// ==========================================================================
+// 8. WEATHER FETCH & RENDER
+// ==========================================================================
 async function fetchWeather(query) {
   if (!query) return;
 
   showLoader(true);
   hideError();
 
-  if (isDemoMode) {
-    await new Promise(r => setTimeout(r, 550));
-    const data = fetchMockWeatherData(query);
-    const forecast = generateMockForecast(query);
+  // If in demo mode, generate and render offline mock data directly
+  if (currentMode === 'demo') {
+    await new Promise(r => setTimeout(r, 450)); // subtle simulated network lag for premium feel
+    const mockData = fetchMockWeatherData(query);
+    const mockForecast = generateMockForecast(query);
 
-    if (data && data.cod !== "404" && data.cod !== 404) {
-      renderWeatherCard(data);
-      renderForecastGrid(forecast);
+    if (mockData && mockData.cod !== "404" && mockData.cod !== 404) {
+      renderWeatherCard(mockData);
+      renderForecastGrid(mockForecast);
     } else {
-      showError("City Not Found", "The city could not be found in offline demo mode. Try a different name or add an API key.");
+      showError("City Not Found", "The city could not be found in offline demo mode. Try a different name.");
     }
     showLoader(false);
     return;
   }
 
-  // Real API
-  let currentUrl, forecastUrl;
+  // Live mode - call backend
+  let backendUrl;
   if (typeof query === 'string') {
-    const q = encodeURIComponent(query.trim());
-    currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${q}&units=metric&appid=${apiToken}`;
-    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${q}&units=metric&appid=${apiToken}`;
+    backendUrl = `/weather?q=${encodeURIComponent(query.trim())}`;
   } else {
-    currentUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${query.lat}&lon=${query.lon}&units=metric&appid=${apiToken}`;
-    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${query.lat}&lon=${query.lon}&units=metric&appid=${apiToken}`;
+    backendUrl = `/weather?lat=${query.lat}&lon=${query.lon}`;
   }
 
   try {
-    const [wResp, fResp] = await Promise.all([fetch(currentUrl), fetch(forecastUrl)]);
-    const wData = await wResp.json();
-    const fData = await fResp.json();
+    const headers = {};
+    if (userApiKey) {
+      headers['x-api-key'] = userApiKey;
+    }
 
-    if (wData.cod === "404" || wData.cod === 404) {
+    const resp = await fetch(backendUrl, { headers });
+    const data = await resp.json();
+
+    // 401 status indicates the API key is missing, unauthorized, or not configured
+    if (resp.status === 401 || data.cod === 401) {
+      console.warn("Backend reported API key not set or invalid. Falling back to local demo mode.");
+      
+      // Auto toggle to demo mode
+      currentMode = 'demo';
+      updateModeUI();
+      
+      alert(data.message || "API key not set or invalid. Reverting to Demo Mode.");
+
+      // Fetch as demo instead
+      const mockData = fetchMockWeatherData(query);
+      const mockForecast = generateMockForecast(query);
+
+      if (mockData && mockData.cod !== "404" && mockData.cod !== 404) {
+        renderWeatherCard(mockData);
+        renderForecastGrid(mockForecast);
+      } else {
+        showError("City Not Found", "The city could not be found in offline demo mode. Try a different name.");
+      }
+      return;
+    }
+
+    if (resp.status === 404 || data.cod === "404" || data.cod === 404) {
       showError("City Not Found", "We couldn't locate this city. Check the spelling and try again.");
       return;
     }
-    if (!wResp.ok) throw new Error(wResp.status === 401 ? "Unauthorized Key" : "API Error");
 
-    renderWeatherCard(wData);
-    renderForecastGrid(parseForecastList(fData.list));
+    if (!resp.ok) {
+      throw new Error(data.message || "Failed to fetch weather data");
+    }
+
+    // Render weather using combined backend data
+    renderWeatherCard(data.weather);
+    renderForecastGrid(parseForecastList(data.forecast.list));
+
   } catch (err) {
     console.error(err);
-    if (err.message === "Unauthorized Key") {
-      showError("Invalid API Key", "Your OpenWeatherMap key is inactive. Please verify the key.");
-    } else if (!navigator.onLine) {
+    if (!navigator.onLine) {
       showError("No Connection", "Check your internet connection and try again.");
     } else {
       showError("Service Unavailable", "Could not retrieve weather. Please try again later.");
@@ -610,6 +665,93 @@ if (el.modalCloseBtn) el.modalCloseBtn.addEventListener('click', () => el.helpMo
 if (el.modalOkBtn) el.modalOkBtn.addEventListener('click', () => el.helpModal.classList.remove('active'));
 el.helpModal?.addEventListener('click', e => { if (e.target === el.helpModal) el.helpModal.classList.remove('active'); });
 
+// API Key toggle drawer click
+if (el.apiKeyToggleBtn) {
+  el.apiKeyToggleBtn.addEventListener('click', () => {
+    if (el.apiKeyWrapper) {
+      el.apiKeyWrapper.classList.toggle('open');
+      if (el.apiKeyWrapper.classList.contains('open') && el.apiKeyInput) {
+        el.apiKeyInput.focus();
+      }
+    }
+  });
+}
+
+// API Key save/clear click
+if (el.apiKeySaveBtn) {
+  el.apiKeySaveBtn.addEventListener('click', () => {
+    if (!el.apiKeyInput) return;
+    const newKey = el.apiKeyInput.value.trim();
+    if (newKey) {
+      userApiKey = newKey;
+      localStorage.setItem('owm_user_api_key', newKey);
+      if (el.apiKeyWrapper) el.apiKeyWrapper.classList.remove('open');
+      
+      // Auto switch to Live mode when saving a key
+      currentMode = 'live';
+      updateModeUI();
+      
+      const currentCity = el.cityName ? el.cityName.textContent : 'New Delhi';
+      const cityOnly = currentCity.split(',')[0].trim();
+      fetchWeather(cityOnly);
+    } else {
+      userApiKey = '';
+      localStorage.removeItem('owm_user_api_key');
+      alert("API Key cleared. Switching back to Demo Mode.");
+      
+      currentMode = 'demo';
+      updateModeUI();
+      
+      const currentCity = el.cityName ? el.cityName.textContent : 'New Delhi';
+      const cityOnly = currentCity.split(',')[0].trim();
+      fetchWeather(cityOnly);
+    }
+  });
+}
+
+// Save/trigger key when user presses Enter inside API input
+if (el.apiKeyInput) {
+  el.apiKeyInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (el.apiKeySaveBtn) el.apiKeySaveBtn.click();
+    }
+  });
+}
+
+// Demo Mode button click
+if (el.demoModeBtn) {
+  el.demoModeBtn.addEventListener('click', () => {
+    if (currentMode !== 'demo') {
+      currentMode = 'demo';
+      updateModeUI();
+      const currentCity = el.cityName ? el.cityName.textContent : 'New Delhi';
+      const cityOnly = currentCity.split(',')[0].trim();
+      fetchWeather(cityOnly);
+    }
+  });
+}
+
+// Live Mode button click
+if (el.liveModeBtn) {
+  el.liveModeBtn.addEventListener('click', () => {
+    if (currentMode !== 'live') {
+      // Check if live weather is possible (server-side key or client-side key)
+      if (hasServerApiKey || userApiKey) {
+        currentMode = 'live';
+        updateModeUI();
+        const currentCity = el.cityName ? el.cityName.textContent : 'New Delhi';
+        const cityOnly = currentCity.split(',')[0].trim();
+        fetchWeather(cityOnly);
+      } else {
+        // Prompt user to enter their key and slide open the key bar
+        if (el.apiKeyWrapper) el.apiKeyWrapper.classList.add('open');
+        if (el.apiKeyInput) el.apiKeyInput.focus();
+        alert("Please enter your OpenWeatherMap API Key in the highlighted field to enable Live Weather Data, or configure the server's .env file.");
+      }
+    }
+  });
+}
+
 // ==========================================================================
 // 14. CACHED DATA FOR THEME SWITCH RE-RENDER
 // ==========================================================================
@@ -632,18 +774,36 @@ renderForecastGrid = function (data) {
 // ==========================================================================
 // 15. INIT
 // ==========================================================================
-(function init() {
+async function init() {
   initTheme();
   createBubbles();
   createStars();
 
-  // Check stored API key
-  const storedKey = localStorage.getItem('open_weather_api_key');
-  if (storedKey) {
-    apiToken = storedKey;
-    isDemoMode = false;
+  // Pre-fill user saved API key if available
+  if (userApiKey && el.apiKeyInput) {
+    el.apiKeyInput.value = userApiKey;
   }
 
-  // Default city
+  // Fetch API status to check if server-side key exists
+  try {
+    const configResp = await fetch('/api-status');
+    const configData = await configResp.json();
+    hasServerApiKey = !!configData.hasServerKey;
+  } catch (e) {
+    console.error("Could not fetch API configuration status from backend server:", e);
+    hasServerApiKey = false;
+  }
+
+  // Auto-activate Live mode if a backend key or client key exists, otherwise fall back to Demo mode
+  if (hasServerApiKey || userApiKey) {
+    currentMode = 'live';
+  } else {
+    currentMode = 'demo';
+  }
+  updateModeUI();
+
+  // Run initial weather lookup
   fetchWeather("New Delhi");
-})();
+}
+
+init();

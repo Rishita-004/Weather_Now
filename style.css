@@ -1047,4 +1047,169 @@ body.dark-mode .btn-modal-ok {
   .fc-high, .fc-low { font-size: 11px; }
   .btn-location span { display: none; }
   .btn-location { padding: 9px 12px; }
+  .api-key-input-bar { max-width: 180px; }
 }
+
+/* ==========================================================================
+   API KEY INPUT BAR
+   ========================================================================== */
+.api-key-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.btn-api-key {
+  position: relative;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.btn-api-key svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Status dot on the key icon */
+.api-status-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F59E0B;
+  border: 1.5px solid rgba(255,255,255,0.6);
+  transition: background 0.3s ease;
+}
+.api-status-dot.live {
+  background: #10B981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+/* Sliding input bar */
+.api-key-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  padding: 0;
+  margin-right: 0;
+  border: none;
+  transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease,
+              padding 0.3s ease,
+              margin-right 0.3s ease;
+  white-space: nowrap;
+}
+.api-key-wrapper.open .api-key-input-bar {
+  max-width: 320px;
+  opacity: 1;
+  padding: 6px 10px;
+  margin-right: 6px;
+  border: var(--glass-border);
+}
+
+.api-key-input-bar input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 500;
+  width: 220px;
+  letter-spacing: 0.3px;
+}
+.api-key-input-bar input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-size: 11.5px;
+}
+
+.api-key-save-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--ease-fast);
+}
+.api-key-save-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.08);
+}
+.api-key-save-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: white;
+}
+
+/* Dark mode adjustments */
+.dark-mode .api-key-input-bar input {
+  color: var(--text-primary);
+}
+.dark-mode .api-status-dot {
+  border-color: rgba(100,120,160,0.5);
+}
+
+/* ==========================================================================
+   MODE TOGGLE (DEMO vs LIVE)
+   ========================================================================== */
+.mode-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 12px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.08);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.mode-toggle-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.mode-toggle-btn.active {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 3px 8px rgba(26, 110, 221, 0.3);
+}
+
+body.dark-mode .mode-toggle-btn.active {
+  background: linear-gradient(135deg, #5B9DFF 0%, #38BDF8 100%);
+  box-shadow: 0 3px 8px rgba(56, 189, 248, 0.3);
+}
+
+@media (max-width: 768px) {
+  .mode-toggle-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}
+
