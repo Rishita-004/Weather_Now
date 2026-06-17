@@ -412,58 +412,58 @@ async function fetchWeather(query) {
     return;
   }
 
-  // Live mode - call backend
-  let backendUrl;
+  // Live mode - call OpenWeatherMap directly (since backend is removed)
+  let currentUrl, forecastUrl;
+  const keyToUse = userApiKey || '082555b2676a99d93c5d2600f6a73d41';
+  
   if (typeof query === 'string') {
-    backendUrl = `/weather?q=${encodeURIComponent(query.trim())}`;
+    const city = encodeURIComponent(query.trim());
+    currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${keyToUse}`;
+    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${keyToUse}`;
   } else {
-    backendUrl = `/weather?lat=${query.lat}&lon=${query.lon}`;
+    currentUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${query.lat}&lon=${query.lon}&units=metric&appid=${keyToUse}`;
+    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${query.lat}&lon=${query.lon}&units=metric&appid=${keyToUse}`;
   }
 
   try {
-    const headers = {};
-    if (userApiKey) {
-      headers['x-api-key'] = userApiKey;
-    }
+    const [currentResp, forecastResp] = await Promise.all([
+      fetch(currentUrl),
+      fetch(forecastUrl)
+    ]);
+    
+    const data = await currentResp.json();
+    const forecastData = await forecastResp.json();
 
-    const resp = await fetch(backendUrl, { headers });
-    const data = await resp.json();
-
-    // 401 status indicates the API key is missing, unauthorized, or not configured
-    if (resp.status === 401 || data.cod === 401) {
-      console.warn("Backend reported API key not set or invalid. Falling back to local demo mode.");
-      
-      // Auto toggle to demo mode
+    if (currentResp.status === 401 || data.cod == 401) {
+      console.warn("API key not set or invalid. Falling back to local demo mode.");
       currentMode = 'demo';
       updateModeUI();
-      
       alert(data.message || "API key not set or invalid. Reverting to Demo Mode.");
-
-      // Fetch as demo instead
       const mockData = fetchMockWeatherData(query);
       const mockForecast = generateMockForecast(query);
-
       if (mockData && mockData.cod !== "404" && mockData.cod !== 404) {
         renderWeatherCard(mockData);
         renderForecastGrid(mockForecast);
       } else {
-        showError("City Not Found", "The city could not be found in offline demo mode. Try a different name.");
+        showError("City Not Found", "The city could not be found in offline demo mode.");
       }
       return;
     }
 
-    if (resp.status === 404 || data.cod === "404" || data.cod === 404) {
+    if (currentResp.status === 404 || data.cod === "404" || data.cod === 404) {
       showError("City Not Found", "We couldn't locate this city. Check the spelling and try again.");
       return;
     }
 
-    if (!resp.ok) {
+    if (!currentResp.ok) {
       throw new Error(data.message || "Failed to fetch weather data");
     }
 
-    // Render weather using combined backend data
-    renderWeatherCard(data.weather);
-    renderForecastGrid(parseForecastList(data.forecast.list));
+    // Render weather
+    renderWeatherCard(data);
+    if (forecastResp.ok && forecastData.list) {
+      renderForecastGrid(parseForecastList(forecastData.list));
+    }
 
   } catch (err) {
     console.error(err);
@@ -784,15 +784,8 @@ async function init() {
     el.apiKeyInput.value = userApiKey;
   }
 
-  // Fetch API status to check if server-side key exists
-  try {
-    const configResp = await fetch('/api-status');
-    const configData = await configResp.json();
-    hasServerApiKey = !!configData.hasServerKey;
-  } catch (e) {
-    console.error("Could not fetch API configuration status from backend server:", e);
-    hasServerApiKey = false;
-  }
+  // The backend has been removed, so we won't query /api-status
+  hasServerApiKey = false;
 
   // Auto-activate Live mode if a backend key or client key exists, otherwise fall back to Demo mode
   if (hasServerApiKey || userApiKey) {
